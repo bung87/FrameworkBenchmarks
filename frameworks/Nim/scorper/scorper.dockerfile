@@ -6,7 +6,7 @@ ADD ./ /scorper
 WORKDIR /scorper
 
 RUN nimble install -d -y
-RUN nimble c -d:ChronosAsync -d:release --opt:speed -d:danger -o:scorper_bench_bin ./scorper_bench.nim
+RUN nimble c -d:TestWhileIdle=false -d:GzipEnable=false -d:ResetConnection=false -d:ChronosAsync -d:timeout=30000 -d:release -o:scorper_bench_bin ./scorper_bench.nim
 
 EXPOSE 8080
 

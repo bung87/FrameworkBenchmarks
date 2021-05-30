@@ -12,6 +12,6 @@ backend       = "c"
 # Dependencies
 
 requires "nim >= 1.2.0"
-requires "scorper >= 1.0.6"
-requires "amysql >= 0.6.1"
+requires "scorper >= 1.0.7"
+requires "amysql >= 0.7.2"
 requires "karax"
