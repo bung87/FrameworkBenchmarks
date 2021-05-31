@@ -13,5 +13,5 @@ backend       = "c"
 
 requires "nim >= 1.2.0"
 requires "scorper >= 1.0.7"
-requires "amysql >= 0.7.2"
+requires "amysql >= 0.7.3"
 requires "karax"

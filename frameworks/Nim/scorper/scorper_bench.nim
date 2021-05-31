@@ -4,26 +4,18 @@ import amysql
 import amysql / async_pool
 import ./scorper_bench/fortune_view
 
-proc getIP(host: string): string = 
-    result = nativesockets.getHostByName(host).addrList[0]
-
 const DB_DRIVER = getEnv("DB_DRIVER", "mysql")
-# const DB_HOST = getEnv("DB_HOST", "tfb-database:3306")
-let ipAddr = getIP("tfb-database")
-
-let port = 3306
+const DB_HOST = getEnv("DB_HOST", "tfb-database:3306")
 const DB_USER = getEnv("DB_USER", "benchmarkdbuser")
 const DB_PASSWORD = getEnv("DB_PASSWORD", "benchmarkdbpass")
 const DB_DATABASE = getEnv("DB_DATABASE", "hello_world")
-let DB_DSN = fmt"mysql://{DB_USER}:{DB_PASSWORD}@{ipAddr}:{port}/{DB_DATABASE}"
+
+const DB_DSN = fmt"mysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_DATABASE}"
 
 
 let poolSize = 512
 
 var conn{.threadvar.}:AsyncPoolRef
-
-var lock {.threadvar.}:AsyncLock
-lock = newAsyncLock()
 
 conn = waitFor newAsyncPool(DB_DSN,poolSize)
 
@@ -40,10 +32,7 @@ proc plaintextHandler(req: Request) {.route("get","/plaintext"),async.} =
 proc dbHandler(req: Request) {.route("get","/db"),async.} = 
   var headers = {"Content-type": "application/json"}
   let i = rand(1..10000)
-  # await lock.acquire()
-  # echo conn.hasFreeConn()
   let row = await conn.getRow(sql"select id,randomNumber from world where id=?", i)
-  # lock.release()
   await req.resp($ %* {"id":parseInt row[0],"randomNumber":parseInt(row[1]) },headers.newHttpHeaders())
 
 type QueryData = ref object
@@ -76,11 +65,8 @@ proc queriesHandler(req: Request) {.route("get","/queries"),async.} =
   
   for _ in 1..countNum:
     i = rand(1..10000)
-    echo conn.hasFreeConn(),$i
     try:
-      # await lock.acquire()
       row = await conn.getRow(sql"select id,randomNumber from world where id=?", i)
-      # lock.release()
       response.add newQueryData(parseInt row[0],parseInt row[1])
     except Exception as e:
       echo e.msg
@@ -119,14 +105,14 @@ proc updatesHandler(req: Request) {.route("get","/updates"),async.} =
 
   var response:seq[QueryData] = @[]
 
-  conn.withConn(conn2):
-    conn2.transaction:
-      for _ in 1..countNum:
-        let i = rand(1..10000)
-        let newRandomNumber = rand(1..10000)
-        discard await conn2.exec(sql"select * from world where id=?",$i)
-        discard await conn2.exec(sql"update `world` set randomNumber=? where id = ?", $newRandomNumber,$i)
-        response.add newQueryData(i,newRandomNumber)
+  # conn.withConn(conn2):
+  #   conn2.transaction:
+  for _ in 1..countNum:
+    let i = rand(1..10000)
+    let newRandomNumber = rand(1..10000)
+    discard await conn.exec(sql"select * from world where id=?",$i)
+    discard await conn.exec(sql"update `world` set randomNumber=? where id = ?", $newRandomNumber,$i)
+    response.add newQueryData(i,newRandomNumber)
 
   let headers = {"Content-type": "application/json"}
   await req.resp($ %* response,headers.newHttpHeaders())
